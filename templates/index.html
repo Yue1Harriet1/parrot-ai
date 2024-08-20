@@ -59,7 +59,7 @@
             // Add the user's message to the chat container (right-aligned)
             addTextMessage(message, 'user');
 
-            // Simulate the server sending back an audio response
+            // Fetch the generated audio file from the server
             fetch('/', {
                 method: 'POST',
                 headers: {
@@ -70,11 +70,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Simulate receiving an audio response and play it (left-aligned for API)
-                    addAudioMessage('/path/to/your/audio/file.mp3'); // Replace with actual audio file URL
+                    // Add the audio message to the chat container
+                    addAudioMessage(data.audio_url);
                 } else {
-                    alert(data.message);
+                    console.error(data.message);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
             });
 
             // Clear the input field after sending
@@ -85,14 +88,14 @@
         function addTextMessage(message, sender) {
             const chatContainer = document.getElementById('chat-container');
             const messageBubble = document.createElement('div');
-            
+
             // Style based on the sender (user or API)
             if (sender === 'user') {
-                messageBubble.className = 'self-end bg-green-600 text-white p-3 rounded-lg max-w-xs break-words';
+                messageBubble.className = 'self-end bg-blue-500 text-white p-3 rounded-lg max-w-xs break-words';
             } else {
                 messageBubble.className = 'self-start bg-gray-200 text-gray-900 p-3 rounded-lg max-w-xs break-words';
             }
-            
+
             messageBubble.textContent = message;
             chatContainer.appendChild(messageBubble);
 

@@ -1,39 +1,43 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
-import io
+from TTS.api import TTS
+import os
+import random
 
+# Basic Flask instantiation, and TTS model loading (this should be done outside the app for better modularization)
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+text_to_speech = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
+output_dir = "audio_outputs/"
 
+# Global variable to store messages (this should be replaced by a database)
 messages = []
 
+# Basic Flask route to handle the chat page (the only page in this example)
 @app.route('/', methods=['GET', 'POST'])
-@app.route('/index', methods=['GET', 'POST'])
 def chat():
     if request.method == 'POST':
         user_message = request.form['message']
         if user_message:
-            messages.append(user_message)
-            # Calls the pipeline for audio generation
+            # Append the user message to the chat history
+            messages.append({'type': 'text', 'content': user_message})
             try:
-                # Generate or retrieve an audio file (simulated here)
-                audio_data = generate_audio_response(user_message)  # Replace this with your logic
-                
-                # Append audio message to chat
-                messages.append({'type': 'audio', 'content': audio_data})
-                return jsonify({'status': 'success', 'message': 'Audio generated successfully.'})
+                audio_filename = generate_random_filename()
+                output_path = output_dir + audio_filename
+                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav="audio_samples/female.wav", language="en")
+                messages.append({'type': 'audio', 'content': audio_filename})
+                return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=audio_filename)})
             except Exception as e:
                 return jsonify({'status': 'error', 'message': str(e)})
         return redirect(url_for('chat'))
-    
     return render_template('index.html', messages=messages)
 
-def generate_audio_response(message):
-    # Simulating audio file generation
-    # In practice, you'd use a library like gTTS, or return a real audio file
-    audio_content = io.BytesIO()
-    audio_content.write(b'Fake audio data for message: ' + message.encode())
-    audio_content.seek(0)
-    return audio_content
+@app.route('/get_audio/<filename>')
+def get_audio(filename):
+    return send_file(os.path.join(output_dir, filename), mimetype='audio/wav')
+
+def generate_random_filename():
+    return f"output_{random.randint(1000, 9999)}.wav"
 
 if __name__ == '__main__':
+    os.makedirs(output_dir, exist_ok=True)
     app.run(debug=True)

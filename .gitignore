@@ -1,3 +1,4 @@
 parrot-venv/
 venv/
 __pycache__/
+audio_outputs/
