@@ -1,12 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Material Tailwind with Flask</title>
-  </head>
-  <body>
-    <h1>Hello, Flask!</h1>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParrotAI | Home</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+    </style>
+    <script src="https://cdn.tailwindcss.com">
+        tailwind.config = {
+            mode: 'jit',
+            purge: ['./templates/**/*.html']
+        }
+    </script>
+</head>
+<body class="bg-gray-100 h-full flex flex-col">
+    <nav class="bg-yellow-500">
+        <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
+            <div class="relative flex h-16 items-center justify-between">
+                <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
+                    <div class="flex flex-shrink-0 items-center">
+                    </div>
+                    <div class="hidden sm:ml-6 sm:block">
+                        <div class="flex space-x-4">
+                            <!-- Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" -->
+                            <a href="#" class="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white" aria-current="page">ParrotAI</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Chat Container -->
+    <div id="chat-container" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-4">
+        <!-- Chat bubbles dynamically injected here -->
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-4 border-t bg-white flex items-center">
+        <form id="chat-form" class="w-full flex items-center">
+            <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-green-100" placeholder="Type your message here..."></textarea>
+            <button type="submit" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none">
+                Send
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Handle the form submission
+        document.getElementById('chat-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const message = document.getElementById('chat-input').value;
+
+            // Add the user's message to the chat container (right-aligned)
+            addTextMessage(message, 'user');
+
+            // Simulate the server sending back an audio response
+            fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ 'message': message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Simulate receiving an audio response and play it (left-aligned for API)
+                    addAudioMessage('/path/to/your/audio/file.mp3'); // Replace with actual audio file URL
+                } else {
+                    alert(data.message);
+                }
+            });
+
+            // Clear the input field after sending
+            document.getElementById('chat-input').value = '';
+        });
+
+        // Function to add a text message to the chat container
+        function addTextMessage(message, sender) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageBubble = document.createElement('div');
+            
+            // Style based on the sender (user or API)
+            if (sender === 'user') {
+                messageBubble.className = 'self-end bg-green-600 text-white p-3 rounded-lg max-w-xs break-words';
+            } else {
+                messageBubble.className = 'self-start bg-gray-200 text-gray-900 p-3 rounded-lg max-w-xs break-words';
+            }
+            
+            messageBubble.textContent = message;
+            chatContainer.appendChild(messageBubble);
+
+            // Scroll to the bottom when a new message is added
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Function to add an audio message to the chat container (left-aligned for API)
+        function addAudioMessage(audioUrl) {
+            const chatContainer = document.getElementById('chat-container');
+            const audioContainer = document.createElement('div');
+            audioContainer.className = 'self-start bg-gray-200 p-3 rounded-lg max-w-xs break-words';
+
+            const audioPlayer = document.createElement('audio');
+            audioPlayer.controls = true;
+            audioPlayer.src = audioUrl;
+
+            audioContainer.appendChild(audioPlayer);
+            chatContainer.appendChild(audioContainer);
+
+            // Scroll to the bottom when a new message is added
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
 </html>
