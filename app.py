@@ -7,10 +7,12 @@ import random
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 text_to_speech = TTS("tts_models/multilingual/multi-dataset/xtts_v2")
-output_dir = "audio_outputs/"
 
-# Global variable to store messages (this should be replaced by a database)
+# Global variables to store messages and control application state (this should be replaced by a database)
 messages = []
+output_dir = "audio_outputs/"
+input_dir = "audio_inputs/"
+last_audio_sample = input_dir + "female.wav"
 
 # Basic Flask route to handle the chat page (the only page in this example)
 @app.route('/', methods=['GET', 'POST'])
@@ -23,7 +25,7 @@ def chat():
             try:
                 audio_filename = generate_random_filename()
                 output_path = output_dir + audio_filename
-                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav="audio_samples/female.wav", language="en")
+                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav=last_audio_sample, language="en")
                 messages.append({'type': 'audio', 'content': audio_filename})
                 return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=audio_filename)})
             except Exception as e:
@@ -31,13 +33,32 @@ def chat():
         return redirect(url_for('chat'))
     return render_template('index.html', messages=messages)
 
-@app.route('/get_audio/<filename>')
+@app.route('/upload_voice_sample', methods=['POST'])
+def upload_voice_sample():
+    if 'audio' in request.files:
+        audio_file = request.files['audio']
+        audio_filename = generate_random_filename()
+        input_path = input_dir + audio_filename
+        last_audio_sample = input_path
+        audio_file.save(input_path)
+
+        messages.append({'type': 'audio', 'content': audio_filename})
+        return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=audio_filename)})
+    
+    return jsonify({'status': 'error', 'message': 'No audio file uploaded.'})
+
+@app.route('/get_audio/<filename>', methods=['GET'])
 def get_audio(filename):
-    return send_file(os.path.join(output_dir, filename), mimetype='audio/wav')
+    if os.path.exists(output_dir + filename):
+        return send_file(output_dir + filename, mimetype='audio/wav')
+    elif os.path.exists(input_dir + filename):
+        return send_file(input_dir + filename, mimetype='audio/wav')
+    return jsonify({'status': 'error', 'message': 'No audio file found.'})
 
 def generate_random_filename():
-    return f"output_{random.randint(1000, 9999)}.wav"
+    return f"audio_{random.randint(1000, 9999)}.wav"
 
 if __name__ == '__main__':
     os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(input_dir, exist_ok=True)
     app.run(debug=True)

@@ -43,45 +43,111 @@
     <!-- Input Area -->
     <div class="p-4 border-t bg-white flex items-center">
         <form id="chat-form" class="w-full flex items-center">
-            <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-green-100" placeholder="Type your message here..."></textarea>
-            <button type="submit" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none">
+            <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-blue-300" placeholder="Type your message here..."></textarea>
+            <button type="submit" class="ml-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none">
                 Send
+            </button>
+            <button id="record-button" type="button" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none">
+                Record
+            </button>
+            <button id="stop-record-button" type="button" class="ml-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 focus:outline-none" style="display: none;">
+                Stop
             </button>
         </form>
     </div>
 
     <script>
-        // Handle the form submission
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        // Handle the form submission for text
         document.getElementById('chat-form').addEventListener('submit', function (e) {
             e.preventDefault();
             const message = document.getElementById('chat-input').value;
 
-            // Add the user's message to the chat container (right-aligned)
-            addTextMessage(message, 'user');
+            if (message.trim() !== '') {
+                // Add the user's message to the chat container (right-aligned)
+                addTextMessage(message, 'user');
 
-            // Fetch the generated audio file from the server
-            fetch('/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({ 'message': message })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Add the audio message to the chat container
-                    addAudioMessage(data.audio_url);
-                } else {
-                    console.error(data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+                // Send the text message to the server
+                fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({ 'message': message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Add the audio message to the chat container
+                        addAudioMessage(data.audio_url);
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
 
-            // Clear the input field after sending
-            document.getElementById('chat-input').value = '';
+                // Clear the input field after sending
+                document.getElementById('chat-input').value = '';
+            }
+        });
+
+        // Function to handle voice recording
+        document.getElementById('record-button').addEventListener('click', function () {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+
+                    document.getElementById('record-button').style.display = 'none';
+                    document.getElementById('stop-record-button').style.display = 'inline-block';
+
+                    mediaRecorder.ondataavailable = function (event) {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+                })
+                .catch(error => console.error('Error accessing audio stream:', error));
+        });
+
+        document.getElementById('stop-record-button').addEventListener('click', function () {
+            mediaRecorder.stop();
+            document.getElementById('record-button').style.display = 'inline-block';
+            document.getElementById('stop-record-button').style.display = 'none';
+
+            mediaRecorder.onstop = function () {
+                const audioBlob = new Blob(recordedChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob);
+
+                // Add placeholder for audio message
+                addTextMessage('ParrotAI is now updating the voice model... Please submit your prompt after this process is complete.', 'user');
+
+                // Send the audio blob to the server
+                fetch('/upload_voice_sample', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Add the audio message to the chat container
+                        addAudioMessage(data.audio_url);
+                    } else {
+                        console.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+
+                // Clear the recorded chunks
+                recordedChunks = [];
+            };
         });
 
         // Function to add a text message to the chat container
