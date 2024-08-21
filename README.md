@@ -23,20 +23,25 @@ ParrotAI is a Flask/Python-based application that serves as a proof of concept f
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/dantasl/parrot-ai.git
-   cd ParrotAI``` 
+   cd ParrotAI
+   ``` 
 2. **Set up a Virtual Environment**:
     ```bash
     python3.10 -m venv venv
-    source venv/bin/activate```
+    source venv/bin/activate
+    ```
 3. **Install Required Dependencies**:
     ```bash
-    pip install -r requirements.txt```
+    pip install -r requirements.txt
+    ```
 
 ## Usage
 
 ### Start the Flask Application:
 
+```
 flask run
+```
 
 ## Access the Application:
 Once the Flask server is running, you can access the application in your browser at:
@@ -61,6 +66,7 @@ Once the Flask server is running, you can access the application in your browser
 
 ## Directory Structure:
 
+```
 ParrotAI/
 │
 ├── audio_outputs/            # Directory where generated .wav files are stored
@@ -70,6 +76,7 @@ ParrotAI/
 ├── app.py                    # Main Flask application
 ├── requirements.txt          # Python dependencies
 └── README.md                 # Project README file
+```
 
 ## Enhancements Required for Production
 While ParrotAI is a functional proof of concept, several improvements would be needed to bring it to production:
@@ -86,9 +93,3 @@ While ParrotAI is a functional proof of concept, several improvements would be n
 - **Frontend**: HTML, Tailwind CSS (via CDN)
 - **Text-to-Speech**: HuggingFace `coqui/TTS` model
 - **Audio Handling**: `.wav` file recording and uploading
-
-## License
-This project is licensed under the MIT License. See the LICENSE file for more details.
-
-## Contributing
-Feel free to open issues or submit pull requests to improve the application. We welcome contributions to enhance ParrotAI!
