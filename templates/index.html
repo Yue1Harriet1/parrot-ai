@@ -20,18 +20,12 @@
 <body class="bg-gray-100 h-full flex flex-col">
     <nav class="bg-yellow-500">
         <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
-            <div class="relative flex h-16 items-center justify-between">
-                <div class="flex items-center justify-center">
-                    <div class="hidden sm:ml-6 sm:block">
-                        <div class="flex">
-                            <!-- Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" -->
-                            <a href="#" class="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white" aria-current="page">ParrotAI</a>
-                        </div>
-                    </div>
-                </div>
+            <div class="relative flex h-16 items-center justify-center">
+                <a href="#" class="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white" aria-current="page">ParrotAI</a>
             </div>
         </div>
     </nav>
+    
 
     <!-- Chat Container -->
     <div id="chat-container" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-4">
@@ -39,25 +33,55 @@
     </div>
 
     <!-- Input Area -->
-    <div class="p-4 border-t bg-white flex items-center">
-        <form id="chat-form" class="w-full flex items-center">
-            <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-green-100" placeholder="Type your message here..."></textarea>
-            <button type="submit" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none">
-                Send
-            </button>
-            <!-- File input for uploading .wav files -->
-            <input type="file" id="wav-file-input" accept=".wav" class="ml-4" />
-            <button id="upload-file-button" type="button" class="ml-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 focus:outline-none">
-                Upload
-            </button>
-            <button id="record-button" type="button" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none">
-                Record
-            </button>
-            <button id="stop-record-button" type="button" class="ml-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 focus:outline-none" style="display: none;">
-                Stop
-            </button>
-        </form>
-    </div>
+<div class="p-4 border-t bg-white flex items-center">
+    <form id="chat-form" class="w-full flex items-center">
+        <!-- Language Dropdown -->
+        <select id="language-select" name="language" class="p-2 border rounded-lg focus:outline-none focus:ring focus:ring-green-100">
+            <option value="en" selected>English (en)</option>
+            <option value="es">Spanish (es)</option>
+            <option value="fr">French (fr)</option>
+            <option value="de">German (de)</option>
+            <option value="it">Italian (it)</option>
+            <option value="pt">Portuguese (pt)</option>
+            <option value="pl">Polish (pl)</option>
+            <option value="tr">Turkish (tr)</option>
+            <option value="ru">Russian (ru)</option>
+            <option value="nl">Dutch (nl)</option>
+            <option value="cs">Czech (cs)</option>
+            <option value="ar">Arabic (ar)</option>
+            <option value="zh-cn">Chinese (zh-cn)</option>
+            <option value="ja">Japanese (ja)</option>
+            <option value="hu">Hungarian (hu)</option>
+            <option value="ko">Korean (ko)</option>
+            <option value="hi">Hindi (hi)</option>
+        </select>
+
+        <!-- Textarea for the message -->
+        <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-green-100 ml-4" placeholder="Type your message here..."></textarea>
+        
+        <!-- Submit Button -->
+        <button type="submit" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none">
+            Send
+        </button>
+        
+        <!-- File input for uploading .wav files -->
+        <input type="file" id="wav-file-input" accept=".wav" class="ml-4" />
+        
+        <!-- Upload Button -->
+        <button id="upload-file-button" type="button" class="ml-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 focus:outline-none">
+            Upload
+        </button>
+        
+        <!-- Record and Stop Buttons -->
+        <button id="record-button" type="button" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none">
+            Record
+        </button>
+        <button id="stop-record-button" type="button" class="ml-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 focus:outline-none" style="display: none;">
+            Stop
+        </button>
+    </form>
+</div>
+
 
     <script>
         let mediaRecorder;
@@ -67,6 +91,7 @@
         document.getElementById('chat-form').addEventListener('submit', function (e) {
             e.preventDefault();
             const message = document.getElementById('chat-input').value;
+            const language = document.getElementById('language-select').value;
 
             if (message.trim() !== '') {
                 // Add the user's message to the chat container (right-aligned)
@@ -78,7 +103,10 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: new URLSearchParams({ 'message': message })
+                    body: new URLSearchParams({
+                        'message': message,
+                        'language': language  // Include language in form data
+                    })
                 })
                 .then(response => response.json())
                 .then(data => {

@@ -25,7 +25,8 @@ def chat():
                 audio_filename = generate_random_filename()
                 output_path = output_dir + audio_filename
                 speaker_wav = get_latest_audio_sample()
-                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav=speaker_wav, language="pt")
+                language = request.form['language']
+                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav=speaker_wav, language=language)
                 messages.append({'type': 'audio', 'content': audio_filename})
                 return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=audio_filename)})
             except Exception as e:
