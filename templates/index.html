@@ -21,11 +21,9 @@
     <nav class="bg-yellow-500">
         <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
             <div class="relative flex h-16 items-center justify-between">
-                <div class="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-                    <div class="flex flex-shrink-0 items-center">
-                    </div>
+                <div class="flex items-center justify-center">
                     <div class="hidden sm:ml-6 sm:block">
-                        <div class="flex space-x-4">
+                        <div class="flex">
                             <!-- Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" -->
                             <a href="#" class="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white" aria-current="page">ParrotAI</a>
                         </div>
@@ -43,9 +41,14 @@
     <!-- Input Area -->
     <div class="p-4 border-t bg-white flex items-center">
         <form id="chat-form" class="w-full flex items-center">
-            <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-blue-300" placeholder="Type your message here..."></textarea>
-            <button type="submit" class="ml-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none">
+            <textarea id="chat-input" name="message" rows="1" class="w-full p-2 border rounded-lg resize-none focus:outline-none focus:ring focus:ring-green-100" placeholder="Type your message here..."></textarea>
+            <button type="submit" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 focus:outline-none">
                 Send
+            </button>
+            <!-- File input for uploading .wav files -->
+            <input type="file" id="wav-file-input" accept=".wav" class="ml-4" />
+            <button id="upload-file-button" type="button" class="ml-2 bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 focus:outline-none">
+                Upload
             </button>
             <button id="record-button" type="button" class="ml-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 focus:outline-none">
                 Record
@@ -99,7 +102,7 @@
         document.getElementById('record-button').addEventListener('click', function () {
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
                     mediaRecorder.start();
 
                     document.getElementById('record-button').style.display = 'none';
@@ -120,15 +123,102 @@
             document.getElementById('stop-record-button').style.display = 'none';
 
             mediaRecorder.onstop = function () {
-                const audioBlob = new Blob(recordedChunks, { type: 'audio/wav' });
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+
+                // Convert webm to wav using a library or manual conversion
+                convertBlobToWav(blob).then(wavBlob => {
+                    const formData = new FormData();
+                    formData.append('audio', wavBlob, 'recorded.wav');
+
+                    // Add placeholder for audio message
+                    addTextMessage('Uploading voice recording...', 'user');
+
+                    // Send the audio blob to the server
+                    fetch('/upload_voice_sample', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Add the audio message to the chat container
+                            addAudioMessage(data.audio_url);
+                        } else {
+                            console.error(data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+
+                    // Clear the recorded chunks
+                    recordedChunks = [];
+                });
+            };
+        });
+
+        function convertBlobToWav(blob) {
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const arrayBuffer = reader.result;
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+                        const wavBlob = encodeWav(buffer);
+                        resolve(wavBlob);
+                    });
+                };
+                reader.readAsArrayBuffer(blob);
+            });
+        }
+
+        function encodeWav(buffer) {
+            const audioData = buffer.getChannelData(0);  // Mono channel
+            const wavBuffer = new ArrayBuffer(44 + audioData.length * 2);
+            const view = new DataView(wavBuffer);
+
+            // Write WAV header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + audioData.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);  // Mono channel
+            view.setUint32(24, buffer.sampleRate, true);
+            view.setUint32(28, buffer.sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, audioData.length * 2, true);
+
+            // Write PCM data
+            let offset = 44;
+            for (let i = 0; i < audioData.length; i++) {
+                const sample = Math.max(-1, Math.min(1, audioData[i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        document.getElementById('upload-file-button').addEventListener('click', function () {
+            const fileInput = document.getElementById('wav-file-input');
+            const file = fileInput.files[0];
+
+            if (file && file.type === 'audio/wav') {
                 const formData = new FormData();
-                formData.append('audio', audioBlob);
+                formData.append('audio', file);
 
-                // Add placeholder for audio message
-                addTextMessage('ParrotAI is now updating the voice model... Please submit your prompt after this process is complete.', 'user');
-
-                // Send the audio blob to the server
-                fetch('/upload_voice_sample', {
+                // Send the .wav file to the backend
+                fetch('/upload_wav_file', {
                     method: 'POST',
                     body: formData
                 })
@@ -144,10 +234,9 @@
                 .catch(error => {
                     console.error('Error:', error);
                 });
-
-                // Clear the recorded chunks
-                recordedChunks = [];
-            };
+            } else {
+                alert("Please select a valid .wav file.");
+            }
         });
 
         // Function to add a text message to the chat container
@@ -157,7 +246,7 @@
 
             // Style based on the sender (user or API)
             if (sender === 'user') {
-                messageBubble.className = 'self-end bg-blue-500 text-white p-3 rounded-lg max-w-xs break-words';
+                messageBubble.className = 'self-end bg-green-600 text-white p-3 rounded-lg max-w-xs break-words';
             } else {
                 messageBubble.className = 'self-start bg-gray-200 text-gray-900 p-3 rounded-lg max-w-xs break-words';
             }

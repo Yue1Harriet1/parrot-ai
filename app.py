@@ -25,7 +25,7 @@ def chat():
                 audio_filename = generate_random_filename()
                 output_path = output_dir + audio_filename
                 speaker_wav = get_latest_audio_sample()
-                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav=speaker_wav, language="en")
+                text_to_speech.tts_to_file(text=user_message, file_path=output_path, speaker_wav=speaker_wav, language="pt")
                 messages.append({'type': 'audio', 'content': audio_filename})
                 return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=audio_filename)})
             except Exception as e:
@@ -35,14 +35,30 @@ def chat():
 
 @app.route('/upload_voice_sample', methods=['POST'])
 def upload_voice_sample():
-    if 'audio' in request.files:
-        audio_file = request.files['audio']
-        audio_filename = generate_random_filename()
-        input_path = input_dir + audio_filename
-        audio_file.save(input_path)
-        messages.append({'type': 'audio', 'content': audio_filename})
-        return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=audio_filename)})
-    return jsonify({'status': 'error', 'message': 'No audio file uploaded.'})
+    if 'audio' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part'})
+    file = request.files['audio']
+    if file and file.filename.endswith('.wav'):
+        filename = generate_random_filename()
+        filepath = os.path.join(input_dir, filename)
+        file.save(filepath)
+        return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=filename)})
+    return jsonify({'status': 'error', 'message': 'Invalid file format'})
+
+@app.route('/upload_wav_file', methods=['POST'])
+def upload_wav_file():
+    if 'audio' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part'})
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No selected file'})
+    if file and file.filename.endswith('.wav'):
+        filename = generate_random_filename()
+        file_path = os.path.join(input_dir, filename)
+        file.save(file_path)
+        # Return the URL to the uploaded audio file
+        return jsonify({'status': 'success', 'audio_url': url_for('get_audio', filename=filename)})
+    return jsonify({'status': 'error', 'message': 'Invalid file format. Only .wav files are allowed.'})
 
 @app.route('/get_audio/<filename>', methods=['GET'])
 def get_audio(filename):
